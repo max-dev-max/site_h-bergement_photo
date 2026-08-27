@@ -1,0 +1,488 @@
+openapi: 3.1.0
+info:
+  title: Hébergement privé de photos — API foyer
+  version: 1.0.0
+  description: |
+    API same-origin du site. Cookie de session obligatoire sauf /entree.
+    Les photos ne sont jamais publiques. Un UUID ne suffit pas.
+    Textes d'erreur en français, non révélateurs pour un anonyme.
+  license:
+    name: UNLICENSED
+
+servers:
+  - url: /
+    description: Origine du Worker Cloudflare
+
+tags:
+  - name: session
+  - name: photos
+  - name: corbeille
+  - name: espace
+
+paths:
+  /entree:
+    post:
+      tags: [session]
+      summary: Entrer avec identifiant et mot de passe
+      operationId: entrer
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/Entree"
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Entree"
+      responses:
+        "302":
+          description: Succès — cookie session, redirection /galerie
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: session=...; HttpOnly; Secure; SameSite=Strict; Path=/
+        "401":
+          description: Identifiant ou mot de passe incorrect (message générique, pas de blocage)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+        "400":
+          description: Champ identifiant ou mot de passe vide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+
+  /sortie:
+    post:
+      tags: [session]
+      summary: Se déconnecter
+      operationId: sortir
+      responses:
+        "302":
+          description: Cookie vidé, redirection /entree
+
+  /api/photos:
+    get:
+      tags: [photos]
+      summary: Lister les photos actives (hors corbeille)
+      operationId: listerPhotosActives
+      responses:
+        "200":
+          description: Grille galerie, plus récentes d'abord
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListePhotos"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+    post:
+      tags: [photos]
+      summary: Ajouter une ou plusieurs photos
+      operationId: ajouterPhotos
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [fichiers]
+              properties:
+                fichiers:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: JPEG, PNG, WebP, GIF, HEIC ou AVIF, chacun ≤ 50 Mo
+      responses:
+        "201":
+          description: Photos enregistrées (privées)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListePhotos"
+        "400":
+          description: Format non accepté — aucun fichier conservé pour cet envoi refusé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+        "413":
+          description: Fichier > 50 Mo — aucun fichier conservé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+        "409":
+          description: Quota 9 Go dépassé — aucun fichier conservé pour l'ajout refusé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+
+  /api/photos/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PhotoId"
+    get:
+      tags: [photos]
+      summary: Métadonnées d'une photo (active ou corbeille)
+      operationId: lirePhoto
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Photo"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "404":
+          $ref: "#/components/responses/PhotoIntrouvable"
+
+  /api/photos/{id}/miniature:
+    parameters:
+      - $ref: "#/components/parameters/PhotoId"
+    get:
+      tags: [photos]
+      summary: Miniature (galerie ou corbeille)
+      operationId: lireMiniature
+      responses:
+        "200":
+          description: Image JPEG ou WebP
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: private, no-store
+            X-Robots-Tag:
+              schema:
+                type: string
+                example: noindex, nofollow, noarchive, nosnippet
+          content:
+            image/jpeg: {}
+            image/webp: {}
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "404":
+          $ref: "#/components/responses/PhotoIntrouvable"
+
+  /api/photos/{id}/affichage:
+    parameters:
+      - $ref: "#/components/parameters/PhotoId"
+    get:
+      tags: [photos]
+      summary: Variante affichable en grand (active ou corbeille)
+      operationId: lireAffichage
+      responses:
+        "200":
+          description: JPEG ou WebP, image entière lisible
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: private, no-store
+            X-Robots-Tag:
+              schema:
+                type: string
+                example: noindex, nofollow, noarchive, nosnippet
+          content:
+            image/jpeg: {}
+            image/webp: {}
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "404":
+          $ref: "#/components/responses/PhotoIntrouvable"
+
+  /api/photos/{id}/fichier:
+    parameters:
+      - $ref: "#/components/parameters/PhotoId"
+    get:
+      tags: [photos]
+      summary: Télécharger l'original (galerie uniquement)
+      operationId: telechargerOriginal
+      responses:
+        "200":
+          description: Fichier original, pas une version publique dégradée
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="vacances.jpg"
+            Cache-Control:
+              schema:
+                type: string
+                example: private, no-store
+          content:
+            application/octet-stream: {}
+            image/jpeg: {}
+            image/png: {}
+            image/webp: {}
+            image/gif: {}
+            image/heic: {}
+            image/avif: {}
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "404":
+          $ref: "#/components/responses/PhotoIntrouvable"
+        "409":
+          description: Photo à la corbeille — restaurer d'abord
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+
+  /api/photos/{id}/corbeille:
+    parameters:
+      - $ref: "#/components/parameters/PhotoId"
+    post:
+      tags: [corbeille]
+      summary: Mettre une photo active à la corbeille
+      operationId: mettreALaCorbeille
+      responses:
+        "200":
+          description: Plus dans la galerie, encore récupérable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Photo"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "404":
+          $ref: "#/components/responses/PhotoIntrouvable"
+        "409":
+          description: Déjà à la corbeille
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+
+  /api/photos/{id}/restauration:
+    parameters:
+      - $ref: "#/components/parameters/PhotoId"
+    post:
+      tags: [corbeille]
+      summary: Restaurer une photo vers la galerie
+      operationId: restaurerPhoto
+      responses:
+        "200":
+          description: À nouveau active et téléchargeable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Photo"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+        "404":
+          $ref: "#/components/responses/PhotoIntrouvable"
+        "409":
+          description: Déjà dans la galerie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+
+  /api/corbeille:
+    get:
+      tags: [corbeille]
+      summary: Lister les photos à la corbeille
+      operationId: listerCorbeille
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListePhotos"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+
+  /api/corbeille/vidage:
+    post:
+      tags: [corbeille]
+      summary: Vider la corbeille (destruction définitive)
+      operationId: viderCorbeille
+      responses:
+        "200":
+          description: Photos détruites ou corbeille déjà vide (message explicite)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vidage"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+
+  /api/espace:
+    get:
+      tags: [espace]
+      summary: Quota foyer (galerie + corbeille)
+      operationId: lireEspace
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Espace"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+
+components:
+  securitySchemes:
+    cookieSession:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Cookie HMAC HttpOnly, expiration glissante 30 minutes d'inactivité
+
+  parameters:
+    PhotoId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    NonAuthentifie:
+      description: |
+        Pas de session ou session expirée. Corps identique que la photo existe ou non.
+        Aucun octet photo.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Erreur"
+    PhotoIntrouvable:
+      description: Session valide mais photo absente (ne pas distinguer les causes sensibles)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Erreur"
+
+  schemas:
+    Entree:
+      type: object
+      required: [identifiant, mot_de_passe]
+      properties:
+        identifiant:
+          type: string
+          minLength: 1
+        mot_de_passe:
+          type: string
+          minLength: 1
+          format: password
+
+    Erreur:
+      type: object
+      required: [erreur]
+      properties:
+        erreur:
+          type: string
+          examples:
+            - Authentification requise.
+            - Identifiant ou mot de passe incorrect.
+            - Photo introuvable.
+            - Ce fichier n'est pas une photo acceptée.
+            - La photo dépasse la taille acceptée (50 Mo).
+            - Il n'y a plus assez de place (9 Go).
+            - Restaurez la photo avant de la télécharger.
+
+    Photo:
+      type: object
+      required:
+        - id
+        - nom_fichier
+        - type_mime
+        - octets
+        - largeur
+        - hauteur
+        - date_prise_de_vue
+        - date_ajout
+        - etat
+        - url_miniature
+        - url_affichage
+      properties:
+        id:
+          type: string
+          format: uuid
+        nom_fichier:
+          type: string
+        type_mime:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+            - image/webp
+            - image/gif
+            - image/heic
+            - image/heif
+            - image/avif
+        octets:
+          type: integer
+          minimum: 1
+          maximum: 52428800
+        largeur:
+          type: integer
+          minimum: 1
+        hauteur:
+          type: integer
+          minimum: 1
+        date_prise_de_vue:
+          type: string
+          format: date-time
+          nullable: true
+          description: Null → afficher « Date de prise de vue inconnue »
+        date_ajout:
+          type: string
+          format: date-time
+        etat:
+          type: string
+          enum: [active, corbeille]
+        url_miniature:
+          type: string
+          example: /api/photos/00000000-0000-4000-8000-000000000001/miniature
+        url_affichage:
+          type: string
+          example: /api/photos/00000000-0000-4000-8000-000000000001/affichage
+        url_fichier:
+          type: string
+          nullable: true
+          description: Présent seulement si etat=active ; sinon null (pas de téléchargement)
+
+    ListePhotos:
+      type: object
+      required: [photos]
+      properties:
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Photo"
+
+    Vidage:
+      type: object
+      required: [detruites, message]
+      properties:
+        detruites:
+          type: integer
+          minimum: 0
+        message:
+          type: string
+          examples:
+            - La corbeille a été vidée.
+            - La corbeille est déjà vide.
+
+    Espace:
+      type: object
+      required: [octets_utilises, octets_plafond]
+      properties:
+        octets_utilises:
+          type: integer
+          minimum: 0
+        octets_plafond:
+          type: integer
+          const: 9663676416
+
+security:
+  - cookieSession: []

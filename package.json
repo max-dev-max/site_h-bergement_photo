@@ -1,0 +1,27 @@
+{
+  "name": "projet-site-hebergement-photo",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Hébergement privé de photos du foyer",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "db:local": "wrangler d1 migrations apply foyer-photos --local",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "hono": "^4.9.6"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "@cloudflare/workers-types": "5.20260827.1",
+    "@playwright/test": "^1.55.0",
+    "typescript": "^5.9.2",
+    "vitest": "4.1.11",
+    "wrangler": "4.124.0"
+  }
+}

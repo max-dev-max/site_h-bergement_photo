@@ -1,0 +1,35 @@
+# Dépendances et compilats
+node_modules/
+dist/
+build/
+coverage/
+
+# Cloudflare / Wrangler
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Secrets et environnement — jamais dans git
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Journaux et fichiers temporaires
+*.log
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+
+# Tests
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# Éditeurs
+.vscode/
+.idea/

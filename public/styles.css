@@ -1,0 +1,425 @@
+:root {
+  color-scheme: light;
+  --fond: #f3efe6;
+  --encre: #1c1917;
+  --muet: #57534e;
+  --carte: #fffcf7;
+  --ligne: #e7e0d4;
+  --accent: #3f5d45;
+  --accent-fonce: #2d4433;
+  --danger: #8f2d2d;
+  --ombre: 0 10px 30px rgb(28 25 23 / 8%);
+  font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--encre);
+  min-height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: var(--accent);
+}
+
+.bandeau {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--carte);
+  border-bottom: 1px solid var(--ligne);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.marque {
+  font-weight: 650;
+  text-decoration: none;
+  color: var(--encre);
+  letter-spacing: 0.01em;
+}
+
+.actions-bandeau {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.actions-bandeau a {
+  text-decoration: none;
+  color: var(--muet);
+}
+
+.form-sortie {
+  margin: 0;
+}
+
+.form-ajout {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  align-items: center;
+}
+
+button,
+.bouton,
+.bouton-fichier {
+  font: inherit;
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+button:hover,
+.bouton:hover,
+.bouton-fichier:hover {
+  background: var(--accent-fonce);
+}
+
+.bouton.secondaire {
+  background: transparent;
+  color: var(--encre);
+  border: 1px solid var(--ligne);
+}
+
+.bouton.secondaire:hover {
+  background: #fff;
+  color: var(--encre);
+}
+
+.bouton.danger,
+.danger {
+  background: var(--danger);
+}
+
+button:disabled,
+.bouton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+main {
+  flex: 1;
+}
+
+.carte-entree {
+  max-width: 26rem;
+  margin: 12vh auto;
+  background: var(--carte);
+  padding: 2rem;
+  border-radius: 1.25rem;
+  box-shadow: var(--ombre);
+}
+
+.form-entree {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-entree label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.form-entree input {
+  font: inherit;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--ligne);
+  border-radius: 0.6rem;
+  background: #fff;
+}
+
+.erreur {
+  background: #fde8e8;
+  color: var(--danger);
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.6rem;
+}
+
+.accroche,
+.aide,
+.quota,
+.meta {
+  color: var(--muet);
+}
+
+.barre-galerie {
+  padding: 1.25rem 1.25rem 0.5rem;
+}
+
+.bouton-fichier input {
+  display: none;
+}
+
+.form-ajout .aide,
+.form-ajout .statut {
+  flex-basis: 100%;
+  margin: 0.2rem 0 0;
+}
+
+.statut {
+  min-height: 1.2em;
+}
+
+.etat-vide {
+  margin: 4rem auto;
+  text-align: center;
+  max-width: 28rem;
+}
+
+.actions-galerie {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  align-items: flex-start;
+}
+
+.tri-date {
+  margin: 0;
+}
+
+.tri-date label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+  align-items: center;
+  color: var(--muet);
+}
+
+.tri-date select {
+  font: inherit;
+  color: var(--encre);
+  background: var(--carte);
+  border: 1px solid var(--ligne);
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+}
+
+.groupe-date {
+  margin: 0 0 1.25rem;
+}
+
+.titre-jour {
+  margin: 0;
+  padding: 0.85rem 1.25rem 0.45rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.barre-selection {
+  position: sticky;
+  top: 3.4rem;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1.25rem;
+  background: var(--carte);
+  border-bottom: 1px solid var(--ligne);
+  box-shadow: var(--ombre);
+}
+
+.barre-selection[hidden] {
+  display: none !important;
+}
+
+.compte-selection {
+  margin: 0;
+  font-weight: 650;
+}
+
+.gestes-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.grille {
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 2px;
+}
+
+.cellule-photo {
+  position: relative;
+}
+
+.vignette {
+  display: block;
+  aspect-ratio: 1;
+  background: #111;
+  overflow: hidden;
+}
+
+.case-selection {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: rgb(28 25 23 / 40%);
+  box-shadow: 0 1px 6px rgb(0 0 0 / 35%);
+  opacity: 0;
+  z-index: 2;
+}
+
+.cellule-photo:hover .case-selection,
+.mode-selection .case-selection,
+.cellule-photo.selectionnee .case-selection {
+  opacity: 1;
+}
+
+.case-selection[aria-pressed="true"] {
+  background: var(--accent);
+}
+
+.case-selection[aria-pressed="true"]::after {
+  content: "";
+  display: block;
+  width: 7px;
+  height: 12px;
+  margin: 2px auto 0;
+  border-right: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(45deg);
+}
+
+.cellule-photo.selectionnee .vignette img {
+  filter: brightness(0.78);
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+
+.vignette img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.fil {
+  padding: 1rem 1.25rem 0;
+}
+
+.vue-photo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(16rem, 0.8fr);
+  gap: 1.5rem;
+  padding: 0 1.25rem 2rem;
+  align-items: start;
+}
+
+.cadre-affichage {
+  margin: 0;
+  background: #111;
+  border-radius: 0.75rem;
+  min-height: 50vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+}
+
+.image-entiere {
+  max-width: 100%;
+  max-height: 82vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.infos-photo {
+  background: var(--carte);
+  padding: 1.25rem;
+  border-radius: 1rem;
+  box-shadow: var(--ombre);
+}
+
+.infos-photo h1 {
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.infos-photo dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+}
+
+.infos-photo dt {
+  color: var(--muet);
+}
+
+.gestes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.liste-corbeille {
+  list-style: none;
+  margin: 0;
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.carte-corbeille {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 1rem;
+  background: var(--carte);
+  padding: 0.75rem;
+  border-radius: 0.9rem;
+  align-items: center;
+}
+
+.carte-corbeille img {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
+.nom {
+  margin: 0 0 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 800px) {
+  .vue-photo {
+    grid-template-columns: 1fr;
+  }
+
+  .grille {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  }
+}

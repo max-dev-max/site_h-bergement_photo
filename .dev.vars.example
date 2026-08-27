@@ -1,0 +1,11 @@
+# Copier vers .dev.vars (ce fichier n’est pas lu par Wrangler).
+# Valeurs fictives pour le développement local uniquement.
+# Ne jamais y mettre les vrais identifiants du foyer, ni committer .dev.vars.
+
+FOYER_IDENTIFIANT=foyer
+
+# Mot de passe correspondant à ce hash d’exemple : change-moi
+# Format : pbkdf2-sha256$itérations$selHex$hashHex
+FOYER_MOT_DE_PASSE_HASH=pbkdf2-sha256$100000$d6f8b0e0c0a829f0ba31048cddc1160f$2025617cbc2a193682de61b727272a39d9b876caa61b22327dc72c97222d4cab
+
+SESSION_SECRET=remplace-moi-par-une-chaine-aleatoire-d-au-moins-32-caracteres
