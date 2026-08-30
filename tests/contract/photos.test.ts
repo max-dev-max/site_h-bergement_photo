@@ -54,6 +54,23 @@ describe("contrat photos", () => {
     const quota = await espace.json<{ octets_plafond: number }>()
     expect(quota.octets_plafond).toBe(9663676416)
 
+    const id2 = await ajouterJpeg(cookie)
+    const lot = await SELF.fetch("https://exemple.test/api/photos/corbeille", {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [id, id2] }),
+    })
+    expect(lot.status).toBe(200)
+    const lotJson = await lot.json<{ ids: string[] }>()
+    expect(lotJson.ids).toEqual(expect.arrayContaining([id, id2]))
+
+    const restoLot = await SELF.fetch("https://exemple.test/api/photos/restauration", {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [id, id2] }),
+    })
+    expect(restoLot.status).toBe(200)
+
     const corbeille = await SELF.fetch(`https://exemple.test/api/photos/${id}/corbeille`, {
       method: "POST",
       headers: { Cookie: cookie },

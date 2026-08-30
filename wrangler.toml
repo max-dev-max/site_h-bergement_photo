@@ -10,7 +10,7 @@ run_worker_first = true
 [[d1_databases]]
 binding = "DB"
 database_name = "foyer-photos"
-database_id = "local-dev-foyer-photos"
+database_id = "5870dc0a-48ff-45af-b786-ce2599a1f61e"
 migrations_dir = "migrations"
 
 [[r2_buckets]]

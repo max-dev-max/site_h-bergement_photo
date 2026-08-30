@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test"
-import { writeFileSync } from "node:fs"
+import { expect, test, type Page } from "@playwright/test"
+import { readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
@@ -7,9 +7,25 @@ const jpegB64 =
   "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGcP/EABQQAQAAAAAAAAAAAAAAAAAAACL/2gAIAQEAAT8Af//Z"
 
 function jpegTemp(): string {
-  const chemin = join(tmpdir(), `foyer-${Date.now()}.jpg`)
+  const chemin = join(tmpdir(), `foyer-${Date.now()}-${Math.random().toString(16).slice(2)}.jpg`)
   writeFileSync(chemin, Buffer.from(jpegB64, "base64"))
   return chemin
+}
+
+async function choisirPhotos(page: Page, ...fichiers: string[]) {
+  for (const chemin of fichiers) {
+    const res = await page.request.post("/api/photos", {
+      multipart: {
+        fichiers: {
+          name: chemin.split("/").pop() || "photo.jpg",
+          mimeType: "image/jpeg",
+          buffer: readFileSync(chemin),
+        },
+      },
+    })
+    expect(res.ok(), await res.text()).toBeTruthy()
+  }
+  await page.reload()
 }
 
 test("SC-001 à SC-006 : foyer privé", async ({ page, browser, request }) => {
@@ -27,7 +43,7 @@ test("SC-001 à SC-006 : foyer privé", async ({ page, browser, request }) => {
 
   const avant = await page.locator(".vignette").count()
   const fichier = jpegTemp()
-  await page.locator("#fichiers").setInputFiles(fichier)
+  await choisirPhotos(page, fichier)
   await expect(page.locator(".vignette")).toHaveCount(avant + 1, { timeout: 30_000 })
 
   await page.locator(".vignette").first().click()
@@ -65,7 +81,7 @@ test("sélection de plusieurs photos vers la corbeille", async ({ page }) => {
   await expect(page).toHaveURL(/\/galerie/)
 
   const avant = await page.locator(".vignette").count()
-  await page.locator("#fichiers").setInputFiles([jpegTemp(), jpegTemp()])
+  await choisirPhotos(page, jpegTemp(), jpegTemp())
   await expect(page.locator(".vignette")).toHaveCount(avant + 2, { timeout: 30_000 })
 
   await page.locator("#btn-mode-selection").click()
@@ -89,7 +105,7 @@ test("rangement par date dans la galerie", async ({ page }) => {
   await expect(page).toHaveURL(/\/galerie/)
 
   if ((await page.locator(".vignette").count()) === 0) {
-    await page.locator("#fichiers").setInputFiles(jpegTemp())
+    await choisirPhotos(page, jpegTemp())
     await expect(page.locator(".vignette")).toHaveCount(1, { timeout: 30_000 })
   }
 

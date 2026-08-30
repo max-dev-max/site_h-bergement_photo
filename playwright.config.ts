@@ -8,7 +8,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "npx wrangler dev --port 8787 --ip 127.0.0.1",
+    command: "npm run db:local && npx wrangler dev --port 8787 --ip 127.0.0.1",
     url: "http://127.0.0.1:8787/robots.txt",
     reuseExistingServer: true,
     timeout: 120_000,

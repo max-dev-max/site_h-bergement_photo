@@ -34,7 +34,9 @@ Voir [openapi.yaml](./openapi.yaml). Synthèse :
 | GET | `/api/photos/{id}/affichage` | Oui | Bytes vue agrandie. |
 | GET | `/api/photos/{id}/fichier` | Oui | Original, `Content-Disposition: attachment`. **401/404** si corbeille (pas de téléchargement). |
 | POST | `/api/photos/{id}/corbeille` | Oui | Active → corbeille. |
+| POST | `/api/photos/corbeille` | Oui | Plusieurs actives → corbeille (jusqu’à 400 id). |
 | POST | `/api/photos/{id}/restauration` | Oui | Corbeille → galerie. |
+| POST | `/api/photos/restauration` | Oui | Plusieurs corbeille → galerie (jusqu’à 400 id). |
 | GET | `/api/corbeille` | Oui | Liste corbeille. |
 | POST | `/api/corbeille/vidage` | Oui | Destruction définitive. |
 | GET | `/api/espace` | Oui | Octets utilisés / plafond (message d’ajout). |

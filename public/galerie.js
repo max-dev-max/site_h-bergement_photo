@@ -141,20 +141,51 @@ if (btnAnnuler) {
   })
 }
 
+function retirerDeLaGalerie(ids) {
+  for (const id of ids) {
+    const cellule = document.querySelector(`.cellule-photo[data-id="${id}"]`)
+    if (!cellule) continue
+    const groupe = cellule.closest(".groupe-date")
+    cellule.remove()
+    if (groupe && !groupe.querySelector(".cellule-photo")) groupe.remove()
+  }
+}
+
 if (btnCorbeille && barre) {
   btnCorbeille.addEventListener("click", async () => {
     if (selection.size === 0) return
     const message = barre.getAttribute("data-confirm") || "Confirmer ?"
     if (!window.confirm(message)) return
-    for (const id of selection) {
-      const res = await fetch(`/api/photos/${id}/corbeille`, { method: "POST" })
-      if (!res.ok) {
+    const ids = [...selection]
+    btnCorbeille.disabled = true
+    try {
+      const deplacees = []
+      for (let i = 0; i < ids.length; i += 400) {
+        const lot = ids.slice(i, i + 400)
+        const res = await fetch("/api/photos/corbeille", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: lot }),
+        })
         const data = await res.json().catch(() => ({}))
-        window.alert(data.erreur || "Action impossible.")
-        return
+        if (!res.ok) {
+          window.alert(data.erreur || "Action impossible.")
+          if (deplacees.length) retirerDeLaGalerie(deplacees)
+          return
+        }
+        deplacees.push(...(data.ids || lot))
       }
+      retirerDeLaGalerie(deplacees)
+      selection.clear()
+      modeSelection = false
+      dernierIndex = -1
+      majSelection()
+      if (!document.querySelector(".cellule-photo")) {
+        window.location.reload()
+      }
+    } finally {
+      btnCorbeille.disabled = selection.size === 0
     }
-    window.location.href = "/galerie"
   })
 }
 

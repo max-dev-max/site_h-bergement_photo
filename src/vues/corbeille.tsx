@@ -18,9 +18,19 @@ export function PageCorbeille(props: { photos: Photo[] }) {
         <h1>{textes.corbeille}</h1>
         <p class="aide">Les photos ici ne sont pas téléchargeables. Restaurez-les d’abord.</p>
         {photos.length > 0 ? (
-          <button type="button" id="btn-vidage" class="bouton danger" data-confirm={textes.confirmerVidage}>
-            {textes.viderCorbeille}
-          </button>
+          <div class="gestes-corbeille">
+            <button
+              type="button"
+              id="btn-tout-restaurer"
+              class="bouton secondaire"
+              data-confirm={textes.confirmerToutRestaurer}
+            >
+              {textes.toutRestaurer}
+            </button>
+            <button type="button" id="btn-vidage" class="bouton danger" data-confirm={textes.confirmerVidage}>
+              {textes.viderCorbeille}
+            </button>
+          </div>
         ) : null}
       </section>
 

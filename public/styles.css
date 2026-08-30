@@ -76,6 +76,37 @@ a {
   align-items: center;
 }
 
+.form-ajout.depot {
+  outline: 2px dashed var(--accent);
+  outline-offset: 6px;
+  border-radius: 0.75rem;
+}
+
+.barre-envoi {
+  flex-basis: 100%;
+  height: 0.45rem;
+  background: var(--ligne);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.barre-envoi[hidden] {
+  display: none;
+}
+
+.barre-envoi-plein {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.gestes-corbeille {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 button,
 .bouton,
 .bouton-fichier {
@@ -167,8 +198,17 @@ main {
   padding: 1.25rem 1.25rem 0.5rem;
 }
 
+.bouton-fichier {
+  position: relative;
+}
+
 .bouton-fichier input {
-  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .form-ajout .aide,

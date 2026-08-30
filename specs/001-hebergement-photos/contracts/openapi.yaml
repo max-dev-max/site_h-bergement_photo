@@ -125,6 +125,60 @@ paths:
         "401":
           $ref: "#/components/responses/NonAuthentifie"
 
+  /api/photos/corbeille:
+    post:
+      tags: [corbeille]
+      summary: Mettre plusieurs photos actives à la corbeille
+      operationId: mettrePlusieursALaCorbeille
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdsPhotos"
+      responses:
+        "200":
+          description: Photos déplacées (plus dans la galerie, encore récupérables)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdsPhotos"
+        "400":
+          description: Aucun identifiant valide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+
+  /api/photos/restauration:
+    post:
+      tags: [corbeille]
+      summary: Restaurer plusieurs photos vers la galerie
+      operationId: restaurerPlusieurs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdsPhotos"
+      responses:
+        "200":
+          description: Photos à nouveau actives
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdsPhotos"
+        "400":
+          description: Aucun identifiant valide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+        "401":
+          $ref: "#/components/responses/NonAuthentifie"
+
   /api/photos/{id}:
     parameters:
       - $ref: "#/components/parameters/PhotoId"
@@ -388,6 +442,17 @@ components:
             - La photo dépasse la taille acceptée (50 Mo).
             - Il n'y a plus assez de place (9 Go).
             - Restaurez la photo avant de la télécharger.
+
+    IdsPhotos:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          maxItems: 400
+          items:
+            type: string
+            format: uuid
 
     Photo:
       type: object

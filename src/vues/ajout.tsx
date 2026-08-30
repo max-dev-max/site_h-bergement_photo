@@ -14,6 +14,9 @@ export function PageAjout() {
           </label>
           <p class="aide">{textes.formatsAcceptes}</p>
           <p id="statut-ajout" class="statut" hidden></p>
+          <div id="barre-envoi" class="barre-envoi" hidden>
+            <div id="barre-envoi-plein" class="barre-envoi-plein"></div>
+          </div>
         </form>
       </section>
     </Layout>

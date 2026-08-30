@@ -53,6 +53,9 @@ export function PageGalerie(props: { photos: Photo[]; espace: Espace; tri: TriGa
             ) : null}
             <p class="aide">{textes.formatsAcceptes}</p>
             <p id="statut-ajout" class="statut" hidden></p>
+            <div id="barre-envoi" class="barre-envoi" hidden>
+              <div id="barre-envoi-plein" class="barre-envoi-plein"></div>
+            </div>
           </form>
           {photos.length > 0 ? (
             <form class="tri-date" method="get" action="/galerie">

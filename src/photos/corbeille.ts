@@ -17,8 +17,9 @@ export async function viderCorbeille(env: {
   }
 
   const somme = photos.reduce((acc, p) => acc + p.octets, 0)
-  for (const photo of photos) {
-    await supprimerObjetsPhoto(env.PHOTOS, photo.id)
+  const parallele = 8
+  for (let i = 0; i < photos.length; i += parallele) {
+    await Promise.all(photos.slice(i, i + parallele).map((photo) => supprimerObjetsPhoto(env.PHOTOS, photo.id)))
   }
 
   await env.DB.prepare("DELETE FROM photo WHERE etat = 'corbeille'").run()

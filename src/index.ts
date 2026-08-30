@@ -8,7 +8,14 @@ import { erreurs } from "./middleware/erreurs"
 import { noindex, X_ROBOTS_TAG } from "./middleware/noindex"
 import { ajouterPhotos } from "./photos/ajout"
 import { viderCorbeille } from "./photos/corbeille"
-import { mettreALaCorbeille, photoApres, restaurerPhoto } from "./photos/etats"
+import {
+  idsValides,
+  mettreALaCorbeille,
+  mettrePlusieursALaCorbeille,
+  photoApres,
+  restaurerPhoto,
+  restaurerPlusieurs,
+} from "./photos/etats"
 import { servirAffichage, servirFichier, servirMiniature } from "./photos/fichiers"
 import { listerActives, listerCorbeille, trouverPhoto } from "./photos/liste"
 import { lireEspace } from "./photos/quota"
@@ -46,6 +53,7 @@ app.get("*", async (c, next) => {
   const res = await c.env.ASSETS.fetch(c.req.raw)
   const headers = new Headers(res.headers)
   headers.set("X-Robots-Tag", X_ROBOTS_TAG)
+  headers.set("Cache-Control", "private, no-store")
   return new Response(res.body, { status: res.status, headers })
 })
 
@@ -114,6 +122,22 @@ app.post("/api/photos", async (c) => {
     return c.json({ erreur: resultat.echec.erreur }, resultat.echec.statut)
   }
   return c.json({ photos: resultat.ok ? resultat.photos.map(photoVersJson) : [] }, 201)
+})
+
+app.post("/api/photos/corbeille", async (c) => {
+  const corps = await c.req.json().catch(() => null)
+  const ids = idsValides(corps && typeof corps === "object" ? (corps as { ids?: unknown }).ids : null)
+  if (ids.length === 0) return c.json({ erreur: "Aucune photo à traiter." }, 400)
+  const deplacees = await mettrePlusieursALaCorbeille(c.env.DB, ids)
+  return c.json({ ids: deplacees })
+})
+
+app.post("/api/photos/restauration", async (c) => {
+  const corps = await c.req.json().catch(() => null)
+  const ids = idsValides(corps && typeof corps === "object" ? (corps as { ids?: unknown }).ids : null)
+  if (ids.length === 0) return c.json({ erreur: "Aucune photo à traiter." }, 400)
+  const restaurees = await restaurerPlusieurs(c.env.DB, ids)
+  return c.json({ ids: restaurees })
 })
 
 app.get("/api/photos/:id", async (c) => {

@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:local": "wrangler d1 migrations apply foyer-photos --local",
+    "hacher": "node scripts/hacher-mot-de-passe.mjs",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
