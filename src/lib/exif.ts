@@ -1,22 +1,27 @@
 /**
- * Extrait uniquement DateTimeOriginal (ou équivalent) depuis un JPEG EXIF.
- * Pas de GPS, pas de modèle d’appareil. Si absent → null (jamais inventé).
+ * DateTimeOriginal (ou équivalent) depuis JPEG APP1 ou un bloc TIFF
+ * « Exif\\0\\0 » (HEIC/AVIF et autres conteneurs).
+ * OffsetTimeOriginal est lu s’il existe. Jamais de date inventée.
  */
 export function extraireDatePriseDeVue(octets: Uint8Array): string | null {
-  const brut = lireExifDateTimeOriginal(octets)
+  const brut = lireExifDateTimeOriginal(octets) ?? chasserExifDansConteneur(octets)
   if (!brut) return null
-  return normaliserDateExif(brut)
+  return normaliserDateExif(brut.date, brut.decalage)
 }
 
-function normaliserDateExif(valeur: string): string | null {
+function normaliserDateExif(valeur: string, decalage: string | null): string | null {
   const m = /^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/.exec(valeur.trim())
   if (!m) return null
   const [, y, mo, d, h, mi, s] = m
   if (y === "0000" || mo === "00" || d === "00") return null
-  return `${y}-${mo}-${d}T${h}:${mi}:${s}`
+  const base = `${y}-${mo}-${d}T${h}:${mi}:${s}`
+  if (decalage && /^[+-]\d{2}:\d{2}$/.test(decalage)) return `${base}${decalage}`
+  return base
 }
 
-function lireExifDateTimeOriginal(octets: Uint8Array): string | null {
+type ExifDates = { date: string; decalage: string | null }
+
+function lireExifDateTimeOriginal(octets: Uint8Array): ExifDates | null {
   if (octets.length < 4 || octets[0] !== 0xff || octets[1] !== 0xd8) return null
 
   let i = 2
@@ -36,11 +41,33 @@ function lireExifDateTimeOriginal(octets: Uint8Array): string | null {
   return null
 }
 
-function parserApp1Exif(segment: Uint8Array): string | null {
+function chasserExifDansConteneur(octets: Uint8Array): ExifDates | null {
+  const marque = new TextEncoder().encode("Exif\0\0")
+  const limite = Math.min(octets.length - 16, 2_000_000)
+  for (let i = 0; i <= limite; i++) {
+    let ok = true
+    for (let k = 0; k < marque.length; k++) {
+      if (octets[i + k] !== marque[k]) {
+        ok = false
+        break
+      }
+    }
+    if (!ok) continue
+    const date = parserTiff(octets.subarray(i + 6))
+    if (date) return date
+  }
+  return null
+}
+
+function parserApp1Exif(segment: Uint8Array): ExifDates | null {
   if (segment.length < 14) return null
   const prefixe = String.fromCharCode(...segment.subarray(0, 6))
   if (prefixe !== "Exif\0\0") return null
-  const tiff = segment.subarray(6)
+  return parserTiff(segment.subarray(6))
+}
+
+function parserTiff(tiff: Uint8Array): ExifDates | null {
+  if (tiff.length < 14) return null
   const le = tiff[0] === 0x49 && tiff[1] === 0x49
   const be = tiff[0] === 0x4d && tiff[1] === 0x4d
   if (!le && !be) return null
@@ -66,13 +93,14 @@ function parserApp1Exif(segment: Uint8Array): string | null {
       const valeurOff = e + 8
       let offset = valeurOff
       if (type === 2 && count > 4) offset = u32(valeurOff)
-      if (offset + count > tiff.length) return null
+      if (offset < 0 || offset + count > tiff.length) return null
       const brut = String.fromCharCode(...tiff.subarray(offset, offset + count)).replace(/\0/g, "")
       return brut || null
     }
     return null
   }
 
+  if (ifd0 + 2 > tiff.length) return null
   const n0 = u16(ifd0)
   let exifIfd: number | null = null
   for (let k = 0; k < n0; k++) {
@@ -81,11 +109,13 @@ function parserApp1Exif(segment: Uint8Array): string | null {
     if (u16(e) === 0x8769) exifIfd = u32(e + 8)
   }
 
+  let date: string | null = null
+  let decalage: string | null = null
   if (exifIfd != null) {
-    const original = depuisIfd(exifIfd, 0x9003)
-    if (original) return original
-    const digitalise = depuisIfd(exifIfd, 0x9004)
-    if (digitalise) return digitalise
+    date = depuisIfd(exifIfd, 0x9003) ?? depuisIfd(exifIfd, 0x9004)
+    decalage = depuisIfd(exifIfd, 0x9011)
   }
-  return depuisIfd(ifd0, 0x0132)
+  if (!date) date = depuisIfd(ifd0, 0x0132)
+  if (!date) return null
+  return { date, decalage: decalage?.trim() || null }
 }

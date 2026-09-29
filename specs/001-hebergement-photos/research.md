@@ -31,9 +31,9 @@
 
 ## 3. Session (30 minutes d’inactivité)
 
-**Décision** : cookie `session` signé HMAC (Web Crypto), HttpOnly, Secure, SameSite=Strict, Path=`/`. Charge utile minimale (`exp`, `iat`). À **chaque** requête authentifiée réussie, le Worker renouvelle `exp = maintenant + 30 min` (fenêtre glissante). Déconnexion = cookie vidé. Secret `SESSION_SECRET` via `wrangler secret`.
+**Décision** : cookie `session` signé HMAC (Web Crypto), HttpOnly, Secure, SameSite=Strict, Path=`/`. Charge utile minimale (`exp`, `iat`). Le Worker renouvelle `exp = maintenant + 30 min` sur une **action** (page HTML ou mutation : ajout, corbeille, restauration, vidage, tri). Le chargement d’une miniature, d’un affichage, d’un original, du CSS ou d’un JS **ne** prolonge **pas** la session. Déconnexion = cookie vidé. Secret `SESSION_SECRET` via `wrangler secret`.
 
-**Raison** : l’inactivité se mesure aux requêtes vers le site. Pas besoin de Durable Object. Un JWT à expiration fixe de 30 min couperait une personne qui consulte lentement la galerie.
+**Raison** : l’inactivité se mesure aux gestes du foyer, pas aux octets que le navigateur tire tout seul. Un onglet galerie ouvert ne doit pas garder la session éternellement.
 
 **Alternatives écartées** :
 
@@ -54,7 +54,7 @@
 
 Production des dérivés : **binding Cloudflare Images** (`env.IMAGES.input(stream).transform().output()`) — transformation **privée** dans le Worker, résultat écrit dans R2, **aucune** URL de delivery Images.
 
-Si le compte n’a pas le binding Images : repli **côté navigateur** à l’envoi (canvas ; HEIC via décodeur WASM ou Safari). Le serveur refuse l’ajout si la miniature / l’affichage manque ou n’est pas une image acceptable. Le téléchargement reste l’original (FR-009).
+Si Images échoue : repli **canvas JPEG** validé (magic bytes, taille plafonnée), un jeu de dérivés **par** fichier. Si l’original est déjà JPEG/PNG/WebP/GIF, on peut le recopier. Un HEIC/AVIF sans Images ni canvas est **refusé** (pas de miniature HEIC dans `<img>`). Le téléchargement reste l’original (FR-009).
 
 **Raison** : Chrome n’affiche pas le HEIC. La spec exige une vue agrandie nette (US4) **et** le fichier original au téléchargement. Les miniatures légères rendent SC-009 (200 photos < 3 s) tenable. GIF : miniature = première image ; original animé conservé.
 
@@ -68,7 +68,7 @@ Si le compte n’a pas le binding Images : repli **côté navigateur** à l’en
 
 **Décision** : contrôle **magic bytes** + type MIME déclaré, pas seulement l’extension. Types acceptés : JPEG, PNG, WebP, GIF, HEIC/HEIF, AVIF. Taille lue sur le flux : refus > 50 Mo, **aucun** objet R2 conservé. Quota foyer : somme des **originaux** galerie + corbeille ≤ 9 Go (`9 * 1024^3` octets). Mise à la corbeille : quota inchangé. Vidage : objets R2 supprimés, quota décrémenté.
 
-Ajout interrompu : pas de ligne D1 tant que les trois objets R2 ne sont pas écrits ; en cas d’échec partiel, suppression des orphelins R2. Doublon de fichier : **nouvelle** photo (spec).
+Ajout : réserver le quota, écrire les trois objets R2, INSERT D1. Échec → libérer le quota et supprimer les objets R2 de cet id. Doublon de fichier : **nouvelle** photo (spec).
 
 **Raison** : FR-016 et FR-022. Compter les originaux colle au langage « photos du foyer ». Les dérivés sont un surcoût d’implémentation, gardés petits.
 

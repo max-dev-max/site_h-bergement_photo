@@ -37,8 +37,11 @@ npm run dev
 
 Ouvrir l’adresse indiquée par Wrangler, en général <http://127.0.0.1:8787>.
 
-Identifiants d’exemple (fichier `.dev.vars.example`, **pas** pour un vrai foyer) : identifiant `foyer`, mot de passe `change-moi`.  
-Si un `.dev.vars` existe déjà, utilise **ceux-là**. Ne commite jamais `.dev.vars`.
+Identifiants :
+
+- Fichier `.dev.vars.example` (à copier) : identifiant `foyer`, mot de passe `change-moi`.
+- Tests automatiques (Vitest / Playwright) : identifiant `foyer`, mot de passe `mot-de-passe-test` — bindings de test, **pas** ton `.dev.vars`.
+- Si un `.dev.vars` existe déjà, utilise **ceux-là**. Ne commite jamais `.dev.vars`.
 
 ## Héberger soi-même (frontend + backend + base)
 

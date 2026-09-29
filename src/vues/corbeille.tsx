@@ -34,23 +34,27 @@ export function PageCorbeille(props: { photos: Photo[] }) {
         ) : null}
       </section>
 
-      {photos.length === 0 ? (
-        <section class="etat-vide">
-          <p>{textes.corbeilleVide}</p>
-          <p class="aide">{textes.corbeilleVideAide}</p>
-        </section>
-      ) : (
+      <section id="etat-vide-corbeille" class="etat-vide" hidden={photos.length > 0 ? true : undefined}>
+        <p>{textes.corbeilleVide}</p>
+        <p class="aide">{textes.corbeilleVideAide}</p>
+      </section>
+
+      {photos.length > 0 ? (
         <ul class="liste-corbeille">
           {photos.map((photo) => (
             <li class="carte-corbeille" data-id={photo.id}>
-              <img
-                src={`/api/photos/${photo.id}/miniature`}
-                alt={photo.nom_fichier}
-                width={photo.largeur}
-                height={photo.hauteur}
-              />
+              <a href={`/photos/${photo.id}`}>
+                <img
+                  src={`/api/photos/${photo.id}/miniature`}
+                  alt={photo.nom_fichier}
+                  width={photo.largeur}
+                  height={photo.hauteur}
+                />
+              </a>
               <div>
-                <p class="nom">{photo.nom_fichier}</p>
+                <p class="nom">
+                  <a href={`/photos/${photo.id}`}>{photo.nom_fichier}</a>
+                </p>
                 <p class="meta">
                   {photo.date_prise_de_vue ? formaterDate(photo.date_prise_de_vue) : textes.datePriseInconnue}
                   {" · "}
@@ -65,7 +69,7 @@ export function PageCorbeille(props: { photos: Photo[] }) {
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
     </Layout>
   )
 }

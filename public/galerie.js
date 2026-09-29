@@ -14,6 +14,7 @@ window.addEventListener("pagehide", () => {
 const grille = document.getElementById("galerie-photos")
 const barre = document.getElementById("barre-selection")
 const compte = document.getElementById("compte-selection")
+const statutSelection = document.getElementById("statut-selection")
 const btnMode = document.getElementById("btn-mode-selection")
 const btnTout = document.getElementById("btn-tout-selectionner")
 const btnAnnuler = document.getElementById("btn-annuler-selection")
@@ -30,6 +31,12 @@ function cellules() {
 
 function idsOrdonnes() {
   return cellules().map((el) => el.getAttribute("data-id")).filter(Boolean)
+}
+
+function direSelection(message) {
+  if (!statutSelection) return
+  statutSelection.hidden = !message
+  statutSelection.textContent = message || ""
 }
 
 function majSelection() {
@@ -92,6 +99,17 @@ function nomDepuisDisposition(entete, repli) {
   return simple ? simple[1] : repli
 }
 
+function afficherGalerieVide() {
+  const contenu = document.querySelector(".galerie-contenu")
+  if (contenu) contenu.remove()
+  const vide = document.getElementById("etat-vide-galerie")
+  if (vide) vide.hidden = false
+  const mode = document.getElementById("btn-mode-selection")
+  if (mode) mode.remove()
+  const tri = document.querySelector(".tri-date")
+  if (tri) tri.remove()
+}
+
 document.querySelectorAll(".vignette").forEach((lien) => {
   lien.addEventListener("click", (e) => {
     sessionStorage.setItem(CLE, String(window.scrollY))
@@ -138,6 +156,7 @@ if (btnAnnuler) {
     modeSelection = false
     dernierIndex = -1
     majSelection()
+    direSelection("")
   })
 }
 
@@ -173,15 +192,15 @@ if (btnCorbeille && barre) {
           if (deplacees.length) retirerDeLaGalerie(deplacees)
           return
         }
-        deplacees.push(...(data.ids || lot))
+        deplacees.push(...(data.ids || []))
       }
       retirerDeLaGalerie(deplacees)
-      selection.clear()
+      for (const id of deplacees) selection.delete(id)
       modeSelection = false
       dernierIndex = -1
       majSelection()
       if (!document.querySelector(".cellule-photo")) {
-        window.location.reload()
+        afficherGalerieVide()
       }
     } finally {
       btnCorbeille.disabled = selection.size === 0
@@ -189,28 +208,74 @@ if (btnCorbeille && barre) {
   })
 }
 
+async function ecrireDansDossier(ids) {
+  if (typeof window.showDirectoryPicker !== "function" || ids.length < 2) return false
+  let dossier
+  try {
+    dossier = await window.showDirectoryPicker()
+  } catch (err) {
+    if (err && err.name === "AbortError") return true
+    return false
+  }
+  const prefixe = (barre && barre.getAttribute("data-telechargement")) || "Téléchargement en cours…"
+  let faits = 0
+  for (const id of ids) {
+    const res = await fetch(`/api/photos/${id}/fichier`)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.erreur || "Téléchargement impossible.")
+    }
+    const nom = nomDepuisDisposition(res.headers.get("Content-Disposition"), `photo-${id}`)
+    const handle = await dossier.getFileHandle(nom, { create: true })
+    const writable = await handle.createWritable()
+    await writable.write(await res.blob())
+    await writable.close()
+    faits += 1
+    direSelection(`${prefixe} ${faits} / ${ids.length}`)
+  }
+  return true
+}
+
+async function telechargerUnParUn(ids) {
+  const prefixe = (barre && barre.getAttribute("data-telechargement")) || "Téléchargement en cours…"
+  let faits = 0
+  for (const id of ids) {
+    const res = await fetch(`/api/photos/${id}/fichier`)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.erreur || "Téléchargement impossible.")
+    }
+    const blob = await res.blob()
+    const nom = nomDepuisDisposition(res.headers.get("Content-Disposition"), `photo-${id}`)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = nom
+    a.rel = "noopener"
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+    faits += 1
+    direSelection(`${prefixe} ${faits} / ${ids.length}`)
+    if (ids.length > 1) await new Promise((r) => setTimeout(r, 450))
+  }
+}
+
 if (btnTelecharger) {
   btnTelecharger.addEventListener("click", async () => {
     if (selection.size === 0) return
+    const ids = [...selection]
     btnTelecharger.disabled = true
+    const prefixe = (barre && barre.getAttribute("data-telechargement")) || "Téléchargement en cours…"
+    direSelection(prefixe)
     try {
-      for (const id of selection) {
-        const res = await fetch(`/api/photos/${id}/fichier`)
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}))
-          window.alert(data.erreur || "Téléchargement impossible.")
-          return
-        }
-        const blob = await res.blob()
-        const nom = nomDepuisDisposition(res.headers.get("Content-Disposition"), `photo-${id}`)
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = nom
-        a.click()
-        URL.revokeObjectURL(url)
-      }
+      const dossier = await ecrireDansDossier(ids)
+      if (!dossier) await telechargerUnParUn(ids)
+    } catch (err) {
+      window.alert(err && err.message ? err.message : "Téléchargement impossible.")
     } finally {
+      direSelection("")
       btnTelecharger.disabled = selection.size === 0
     }
   })

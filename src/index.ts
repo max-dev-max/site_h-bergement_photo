@@ -3,10 +3,10 @@ import type { Env } from "./env"
 import type { Session } from "./auth/session"
 import { posterEntree, posterSortie } from "./auth/entree"
 import { attributsCookie, cookieDepuisRequete, cookieNom, estHttps, lireSession } from "./auth/session"
-import { auth } from "./middleware/auth"
+import { auth, FICHIERS_STATIQUES } from "./middleware/auth"
 import { erreurs } from "./middleware/erreurs"
 import { noindex, X_ROBOTS_TAG } from "./middleware/noindex"
-import { ajouterPhotos } from "./photos/ajout"
+import { ajouterPhotos, type RepliNavigateur } from "./photos/ajout"
 import { viderCorbeille } from "./photos/corbeille"
 import {
   idsValides,
@@ -21,7 +21,7 @@ import { listerActives, listerCorbeille, trouverPhoto } from "./photos/liste"
 import { lireEspace } from "./photos/quota"
 import { normaliserTri } from "./photos/rangement"
 import { photoVersJson } from "./photos/types"
-import { PageAjout, PageErreurPhoto } from "./vues/ajout"
+import { PageErreurPhoto } from "./vues/ajout"
 import { PageCorbeille } from "./vues/corbeille"
 import { PageEntree } from "./vues/entree"
 import { PageGalerie } from "./vues/galerie"
@@ -29,13 +29,13 @@ import { PagePhoto } from "./vues/photo"
 
 type AppEnv = { Bindings: Env; Variables: { session: Session } }
 
-const STATIQUES = new Set(["/styles.css", "/ajout.js", "/galerie.js", "/photo.js", "/corbeille.js"])
-
 const app = new Hono<AppEnv>()
 
 app.use("*", noindex)
 app.use("*", erreurs)
 app.use("*", auth)
+
+app.get("/favicon.ico", () => new Response(null, { status: 204 }))
 
 app.get("/robots.txt", (c) => {
   return c.text("User-agent: *\nDisallow: /\n", 200, {
@@ -46,7 +46,7 @@ app.get("/robots.txt", (c) => {
 
 app.get("*", async (c, next) => {
   const chemin = new URL(c.req.url).pathname
-  if (!STATIQUES.has(chemin) || !c.env.ASSETS) {
+  if (!FICHIERS_STATIQUES.has(chemin) || !c.env.ASSETS) {
     await next()
     return
   }
@@ -86,11 +86,9 @@ app.get("/galerie", async (c) => {
   return c.html(PageGalerie({ photos, espace, tri }))
 })
 
-app.get("/ajout", (c) => c.html(PageAjout()))
-
 app.get("/photos/:id", async (c) => {
   const photo = await trouverPhoto(c.env.DB, c.req.param("id"))
-  if (!photo || photo.etat !== "active") {
+  if (!photo) {
     return c.html(PageErreurPhoto(), 404)
   }
   return c.html(PagePhoto({ photo }))
@@ -107,21 +105,20 @@ app.get("/api/espace", async (c) => {
 })
 
 app.get("/api/photos", async (c) => {
-  const photos = await listerActives(c.env.DB)
+  const tri = normaliserTri(c.req.query("tri"))
+  const photos = await listerActives(c.env.DB, tri)
   return c.json({ photos: photos.map(photoVersJson) })
 })
 
 app.post("/api/photos", async (c) => {
   const form = await c.req.parseBody({ all: true })
-  const brut = form.fichiers
-  const fichiers = (Array.isArray(brut) ? brut : brut ? [brut] : []).filter(
-    (f): f is File => f instanceof File,
-  )
-  const resultat = await ajouterPhotos(c.env, fichiers)
+  const fichiers = fichiersDuChamp(form.fichiers)
+  const replis = await replisDuFormulaire(form, fichiers.length)
+  const resultat = await ajouterPhotos(c.env, fichiers, replis)
   if (!resultat.ok) {
     return c.json({ erreur: resultat.echec.erreur }, resultat.echec.statut)
   }
-  return c.json({ photos: resultat.ok ? resultat.photos.map(photoVersJson) : [] }, 201)
+  return c.json({ photos: resultat.photos.map(photoVersJson) }, 201)
 })
 
 app.post("/api/photos/corbeille", async (c) => {
@@ -179,5 +176,44 @@ app.post("/api/corbeille/vidage", async (c) => {
   const resultat = await viderCorbeille(c.env)
   return c.json(resultat)
 })
+
+function fichiersDuChamp(brut: unknown): File[] {
+  const liste = Array.isArray(brut) ? brut : brut ? [brut] : []
+  return liste.filter((f): f is File => {
+    if (f instanceof File) return true
+    return typeof Blob !== "undefined" && f instanceof Blob && typeof (f as File).name === "string"
+  })
+}
+
+function nombresDuChamp(brut: unknown): number[] {
+  const liste = Array.isArray(brut) ? brut : brut != null && brut !== "" ? [brut] : []
+  return liste.map((v) => Number(v))
+}
+
+async function replisDuFormulaire(
+  form: Record<string, unknown>,
+  nFichiers: number,
+): Promise<Array<RepliNavigateur | undefined>> {
+  const minis = fichiersDuChamp(form.derive_miniature)
+  const affs = fichiersDuChamp(form.derive_affichage)
+  const largeurs = nombresDuChamp(form.derive_largeur)
+  const hauteurs = nombresDuChamp(form.derive_hauteur)
+  const n = Math.min(nFichiers, minis.length, affs.length, largeurs.length, hauteurs.length)
+  const replis: Array<RepliNavigateur | undefined> = Array.from({ length: nFichiers })
+  for (let i = 0; i < n; i++) {
+    const mini = minis[i]
+    const aff = affs[i]
+    const largeur = largeurs[i]
+    const hauteur = hauteurs[i]
+    if (!mini || !aff || !(largeur > 0) || !(hauteur > 0)) continue
+    replis[i] = {
+      miniature: await mini.arrayBuffer(),
+      affichage: await aff.arrayBuffer(),
+      largeur,
+      hauteur,
+    }
+  }
+  return replis
+}
 
 export default app

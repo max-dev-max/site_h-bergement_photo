@@ -24,7 +24,7 @@ Couple unique identifiant + mot de passe pour tout le site.
 | Champ | Type | Règles |
 | --- | --- | --- |
 | `iat` | datetime | Émission |
-| `exp` | datetime | `maintenant + 30 min` à chaque requête authentifiée réussie |
+| `exp` | datetime | `maintenant + 30 min` à chaque **action** (page HTML ou mutation). Pas renouvelé sur miniature / affichage / original / CSS / JS. |
 | signature | HMAC | Cookie `session` : HttpOnly, Secure, SameSite=Strict, Path=/ |
 
 **Transitions** : absente / invalide / expirée → refus, redirection `/entree` (HTML) ou 401 JSON. Déconnexion → cookie vidé. Inactivité < 30 min → session conservée.
@@ -43,6 +43,7 @@ Image privée déposée après connexion.
 | `hauteur` | entier | Pixels, ≥ 1. |
 | `date_prise_de_vue` | datetime \| null | EXIF si présent. **Null** → UI « Date de prise de vue inconnue ». Jamais inventée. |
 | `date_ajout` | datetime | Instant d’enregistrement réussi (UTC). |
+| `date_rangement` | datetime | `COALESCE(date_prise_de_vue, date_ajout)`, maintenue à l’ajout pour l’index de tri. |
 | `etat` | enum | `active` \| `corbeille`. |
 | `date_corbeille` | datetime \| null | Rempli au passage en corbeille ; null si active. |
 | `cle_original` | texte | Clé R2 `originaux/{id}` |
@@ -53,10 +54,10 @@ Image privée déposée après connexion.
 
 - Fichier réellement image (magic bytes), format de la liste, ≤ 50 Mo.
 - `somme(octets des photos existantes) + octets < 9 Go` sinon refus, **aucun** fichier conservé.
-- Les trois objets R2 doivent exister avant l’INSERT D1.
+- Réserver le quota **avant** d’écrire R2 ; écrire les trois objets R2 ; INSERT D1. Tout échec libère le quota et efface les objets R2 de cet id.
 - Pas de fusion si le même fichier est renvoyé (nouvelle `id`).
 
-**Tri galerie / restauration** : `COALESCE(date_prise_de_vue, date_ajout) DESC`, puis `date_ajout DESC`, puis `id`.
+**Tri galerie / restauration** : `date_rangement DESC` (équivalent `COALESCE(date_prise_de_vue, date_ajout)`), puis `date_ajout DESC`, puis `id`.
 
 **Relations** : appartient au foyer unique. Pas d’album (hors périmètre).
 
@@ -103,10 +104,10 @@ Seau **non public**. Pas de listing R2 exposé au client.
 
 | Transition | Condition | Effets |
 | --- | --- | --- |
-| → active (ajout) | Session, fichier valide, quota OK | R2 écrit, INSERT, quota += octets |
+| → active (ajout) | Session, fichier valide, quota OK | quota réservé, R2 écrit, INSERT |
 | active → corbeille | Session, confirmation UI | `etat=corbeille`, `date_corbeille=now`. Quota **inchangé**. Plus dans la galerie. Plus téléchargeable. |
 | corbeille → active | Session | `etat=active`, `date_corbeille=null`. Reprend le tri habituel. Téléchargement à nouveau possible. |
-| corbeille → détruit | Session, confirmation vidage | DELETE D1 + R2 pour **toutes** les photos `corbeille`. Quota -= somme. Irrécupérable. |
+| corbeille → détruit | Session, confirmation vidage | Par lots : DELETE D1 des lignes encore `corbeille` (RETURNING) + quota -= octets réellement détruits, puis suppression R2. Si le Worker s’arrête, le prochain vidage reprend. Irrécupérable. |
 | vidage corbeille vide | Session | Message explicite, aucune destruction. |
 
 Annulation de confirmation : **aucune** transition.
@@ -123,7 +124,7 @@ Une demande anonyme vers un média ne doit **pas** révéler si l’`id` existe 
 
 ## Index D1 recommandés
 
-- `photo(etat, date_prise_de_vue DESC, date_ajout DESC)` pour la galerie et la corbeille.
+- `photo(etat, date_rangement, date_ajout, id)` pour la galerie et la corbeille (même ordre que `ORDER BY`).
 - `photo(id)` PK.
 
 Pas de table de statistiques de visite.

@@ -1,7 +1,10 @@
 /** Taille maximale d’une photo : 50 Mio. */
 export const OCTETS_MAX_FICHIER = 50 * 1024 * 1024
 
-/** Plafond foyer (galerie + corbeille) : 9 Gio. */
+/**
+ * Plafond foyer (originaux galerie + corbeille) : 9 × 1024³ octets.
+ * L’interface et la spec disent « 9 Go » ; c’est cette constante.
+ */
 export const OCTETS_PLAFOND_FOYER = 9 * 1024 * 1024 * 1024
 
 export function formatOctets(octets: number): string {

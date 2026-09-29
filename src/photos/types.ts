@@ -9,6 +9,7 @@ export type Photo = {
   hauteur: number
   date_prise_de_vue: string | null
   date_ajout: string
+  date_rangement?: string | null
   etat: EtatPhoto
   date_corbeille: string | null
   cle_original: string
@@ -34,6 +35,7 @@ export type PhotoJson = {
 export type Espace = {
   octets_utilises: number
   octets_plafond: number
+  octets_corbeille: number
 }
 
 export function photoVersJson(photo: Photo): PhotoJson {

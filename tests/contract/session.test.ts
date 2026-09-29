@@ -39,6 +39,19 @@ describe("contrat session", () => {
     expect(res.headers.get("Set-Cookie")).toMatch(/SameSite=Strict/i)
   })
 
+  it("protège les scripts métier et laisse le CSS de l’entrée", async () => {
+    const js = await SELF.fetch("https://exemple.test/galerie.js", { redirect: "manual" })
+    expect(js.status).toBe(302)
+    expect(js.headers.get("Location")).toBe("/entree")
+
+    const css = await SELF.fetch("https://exemple.test/styles.css", { redirect: "manual" })
+    expect(css.status).not.toBe(302)
+    expect(css.status).not.toBe(401)
+
+    const ico = await SELF.fetch("https://exemple.test/favicon.ico", { redirect: "manual" })
+    expect(ico.status).toBe(204)
+  })
+
   it("vide le cookie à la sortie", async () => {
     const cookie = await cookieSession()
     const res = await SELF.fetch("https://exemple.test/sortie", {

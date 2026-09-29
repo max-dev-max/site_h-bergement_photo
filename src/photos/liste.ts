@@ -8,7 +8,7 @@ export async function trouverPhoto(db: D1Database, id: string): Promise<Photo | 
 
 function sqlTri(tri: TriGalerie): string {
   const sens = tri === "ancien" ? "ASC" : "DESC"
-  return `ORDER BY COALESCE(date_prise_de_vue, date_ajout) ${sens}, date_ajout ${sens}, id ${sens}`
+  return `ORDER BY COALESCE(date_rangement, date_prise_de_vue, date_ajout) ${sens}, date_ajout ${sens}, id ${sens}`
 }
 
 export async function listerPhotos(

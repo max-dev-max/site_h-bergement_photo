@@ -148,7 +148,7 @@ Une personne connectée ouvre la corbeille, distincte de la galerie. Elle y reco
 2. **Given** une ou plusieurs photos dans la corbeille, **When** la personne demande le vidage et confirme, **Then** ces photos sont détruites définitivement : plus dans la galerie, plus dans la corbeille, plus téléchargeables.
 3. **Given** une demande de vidage, **When** la personne annule, **Then** les photos restent dans la corbeille, inchangées.
 4. **Given** une personne non connectée, **When** elle tente d’ouvrir la corbeille, de restaurer ou de vider, **Then** l’accès est refusé et aucune photo ni information n’est révélée.
-5. **Given** une photo dans la corbeille, **When** la personne la consulte, **Then** elle peut la reconnaître et la restaurer ou vider la corbeille, mais elle ne peut pas la télécharger tant qu’elle n’est pas restaurée.
+5. **Given** une photo dans la corbeille, **When** la personne la consulte (liste ou vue agrandie), **Then** elle peut la reconnaître et la restaurer, mais elle ne peut pas la télécharger tant qu’elle n’est pas restaurée. Un lien d’une photo à la corbeille, pour une personne connectée, MUST l’indiquer clairement (pas le même texte qu’une photo inconnue).
 
 ---
 
@@ -177,7 +177,7 @@ Une personne connectée ouvre la corbeille, distincte de la galerie. Elle y reco
 
 ### Functional Requirements
 
-- **FR-001**: Le site MUST refuser toute personne non authentifiée, excepté sur la page d'entrée.
+- **FR-001**: Le site MUST refuser toute personne non authentifiée, excepté la page d'entrée, `robots.txt`, et la feuille de styles nécessaire à cette page. Les scripts de galerie, d'ajout, de photo et de corbeille MUST exiger une session.
 - **FR-002**: L'entrée MUST exiger à la fois un identifiant ET un mot de passe. Les deux sont obligatoires.
 - **FR-003**: Il n'existe qu'un seul accès foyer : un identifiant et un mot de passe partagés. Toute personne authentifiée avec cet accès MUST voir les mêmes photos actives (toutes les photos du foyer qui ne sont pas à la corbeille). Cette vue d'ensemble MUST NOT être proposée à une personne non authentifiée.
 - **FR-004**: Une personne connectée MUST pouvoir ajouter une ou plusieurs photos depuis son appareil.
@@ -197,7 +197,7 @@ Une personne connectée ouvre la corbeille, distincte de la galerie. Elle y reco
 - **FR-018**: Une personne connectée MUST pouvoir consulter la corbeille (distincte de la galerie) et restaurer une photo vers la galerie.
 - **FR-019**: Une personne connectée MUST pouvoir vider la corbeille, uniquement après une confirmation explicite. Le vidage MUST détruire définitivement les photos qui s’y trouvaient (plus de restauration, plus de téléchargement).
 - **FR-020**: Les photos à la corbeille MUST suivre les mêmes règles d’accès que les photos de la galerie : jamais visibles ni téléchargeables sans authentification.
-- **FR-021**: La session MUST expirer après 30 minutes d’inactivité. Après expiration, toute demande de page, fichier, miniature, informations, téléchargement, corbeille, restauration ou vidage MUST être refusée jusqu’à une nouvelle authentification.
+- **FR-021**: La session MUST expirer après 30 minutes d’inactivité. L’inactivité s’entend : aucune navigation de page HTML et aucune action (entrée, ajout, corbeille, restauration, vidage, changement de tri). Le simple chargement d’une miniature, d’un affichage, d’un original ou d’un fichier statique MUST NOT prolonger la session. Après expiration, toute demande de page, fichier, miniature, informations, téléchargement, corbeille, restauration ou vidage MUST être refusée jusqu’à une nouvelle authentification.
 - **FR-022**: L’espace occupé par toutes les photos du foyer (galerie + corbeille) MUST NOT dépasser 9 Go. Un ajout qui ferait dépasser cette limite MUST être refusé, avec un message clair, sans conserver le fichier refusé. Mettre une photo à la corbeille MUST NOT libérer d’espace ; vider la corbeille MUST libérer l’espace correspondant.
 - **FR-023**: Le site MUST NOT afficher de statistiques de visite ni d’historique de connexion dans l’interface du foyer. S’il existe des journaux techniques pour la personne qui maintient le site (échec d’ajout, erreur serveur), ils MUST rester privés, MUST NOT contenir le mot de passe, et MUST NOT être exposés aux moteurs de recherche ni à une personne non authentifiée.
 - **FR-024**: Pour une galerie d’au plus 200 photos, une personne connectée MUST voir les premières miniatures et pouvoir défiler en moins de 3 secondes, depuis une connexion habituelle du foyer (hors tout premier envoi massif en cours).

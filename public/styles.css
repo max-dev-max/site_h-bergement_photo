@@ -200,15 +200,19 @@ main {
 
 .bouton-fichier {
   position: relative;
+  overflow: hidden;
 }
 
-.bouton-fichier input {
+.bouton-fichier-input {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 0;
   opacity: 0;
   cursor: pointer;
+  font-size: 0;
 }
 
 .form-ajout .aide,
@@ -257,6 +261,21 @@ main {
 
 .groupe-date {
   margin: 0 0 1.25rem;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
+
+.bandeau-corbeille {
+  grid-column: 1 / -1;
+  margin: 0 0 0.5rem;
+  padding: 0.7rem 0.9rem;
+  background: #fde8e8;
+  color: var(--danger);
+  border-radius: 0.6rem;
+}
+
+.quota-corbeille {
+  margin: 0.15rem 0 0;
 }
 
 .titre-jour {

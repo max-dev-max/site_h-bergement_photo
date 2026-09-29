@@ -4,7 +4,11 @@ function retirerCartes(ids) {
     if (carte) carte.remove()
   }
   if (!document.querySelector(".carte-corbeille")) {
-    window.location.reload()
+    document.querySelector(".liste-corbeille")?.remove()
+    document.querySelector(".gestes-corbeille")?.remove()
+    const vide = document.getElementById("etat-vide-corbeille")
+    if (vide) vide.hidden = false
+    else window.location.reload()
   }
 }
 
@@ -59,7 +63,7 @@ if (toutRestaurer) {
           if (restaurees.length) retirerCartes(restaurees)
           return
         }
-        restaurees.push(...(data.ids || lot))
+        restaurees.push(...(data.ids || []))
       }
       retirerCartes(restaurees)
     } finally {

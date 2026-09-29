@@ -1,31 +1,22 @@
 import { expect, test, type Page } from "@playwright/test"
-import { readFileSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 
 const jpegB64 =
   "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGcP/EABQQAQAAAAAAAAAAAAAAAAAAACL/2gAIAQEAAT8Af//Z"
 
-function jpegTemp(): string {
-  const chemin = join(tmpdir(), `foyer-${Date.now()}-${Math.random().toString(16).slice(2)}.jpg`)
-  writeFileSync(chemin, Buffer.from(jpegB64, "base64"))
-  return chemin
+function jpegBuffer(): Buffer {
+  return Buffer.from(jpegB64, "base64")
 }
 
-async function choisirPhotos(page: Page, ...fichiers: string[]) {
-  for (const chemin of fichiers) {
-    const res = await page.request.post("/api/photos", {
-      multipart: {
-        fichiers: {
-          name: chemin.split("/").pop() || "photo.jpg",
-          mimeType: "image/jpeg",
-          buffer: readFileSync(chemin),
-        },
-      },
-    })
-    expect(res.ok(), await res.text()).toBeTruthy()
-  }
-  await page.reload()
+async function choisirPhotos(page: Page, ...noms: string[]) {
+  const avant = await page.locator(".vignette").count()
+  await page.locator("#fichiers").setInputFiles(
+    noms.map((name, i) => ({
+      name: name.endsWith(".jpg") ? name : `photo-${i}.jpg`,
+      mimeType: "image/jpeg",
+      buffer: jpegBuffer(),
+    })),
+  )
+  await expect(page.locator(".vignette")).toHaveCount(avant + noms.length, { timeout: 60_000 })
 }
 
 test("SC-001 à SC-006 : foyer privé", async ({ page, browser, request }) => {
@@ -36,14 +27,17 @@ test("SC-001 à SC-006 : foyer privé", async ({ page, browser, request }) => {
   const robots = await request.get("/robots.txt")
   expect(await robots.text()).toContain("Disallow: /")
 
+  const jsAnonyme = await request.get("/galerie.js", { maxRedirects: 0 })
+  expect(jsAnonyme.status()).toBe(302)
+  expect(jsAnonyme.headers()["location"]).toBe("/entree")
+
   await page.getByLabel("Identifiant").fill("foyer")
   await page.getByLabel("Mot de passe").fill("mot-de-passe-test")
   await page.getByRole("button", { name: "Entrer" }).click()
   await expect(page).toHaveURL(/\/galerie/, { timeout: 60_000 })
 
   const avant = await page.locator(".vignette").count()
-  const fichier = jpegTemp()
-  await choisirPhotos(page, fichier)
+  await choisirPhotos(page, "vacances.jpg")
   await expect(page.locator(".vignette")).toHaveCount(avant + 1, { timeout: 30_000 })
 
   await page.locator(".vignette").first().click()
@@ -81,7 +75,7 @@ test("sélection de plusieurs photos vers la corbeille", async ({ page }) => {
   await expect(page).toHaveURL(/\/galerie/)
 
   const avant = await page.locator(".vignette").count()
-  await choisirPhotos(page, jpegTemp(), jpegTemp())
+  await choisirPhotos(page, "a.jpg", "b.jpg")
   await expect(page.locator(".vignette")).toHaveCount(avant + 2, { timeout: 30_000 })
 
   await page.locator("#btn-mode-selection").click()
@@ -93,7 +87,6 @@ test("sélection de plusieurs photos vers la corbeille", async ({ page }) => {
 
   page.once("dialog", (d) => d.accept())
   await page.locator("#btn-corbeille-selection").click()
-  await expect(page).toHaveURL(/\/galerie/)
   await expect(page.locator(".vignette")).toHaveCount(avant)
 })
 
@@ -105,7 +98,7 @@ test("rangement par date dans la galerie", async ({ page }) => {
   await expect(page).toHaveURL(/\/galerie/)
 
   if ((await page.locator(".vignette").count()) === 0) {
-    await choisirPhotos(page, jpegTemp())
+    await choisirPhotos(page, "date.jpg")
     await expect(page.locator(".vignette")).toHaveCount(1, { timeout: 30_000 })
   }
 

@@ -34,7 +34,7 @@ describe("contrat photos", () => {
     const cookie = await cookieSession()
     const id = await ajouterJpeg(cookie)
 
-    const liste = await SELF.fetch("https://exemple.test/api/photos", { headers: { Cookie: cookie } })
+    const liste = await SELF.fetch("https://exemple.test/api/photos?tri=ancien", { headers: { Cookie: cookie } })
     expect(liste.status).toBe(200)
     const photos = await liste.json<{ photos: { id: string; url_fichier: string | null }[] }>()
     expect(photos.photos.some((p) => p.id === id)).toBe(true)
@@ -51,8 +51,9 @@ describe("contrat photos", () => {
 
     const espace = await SELF.fetch("https://exemple.test/api/espace", { headers: { Cookie: cookie } })
     expect(espace.status).toBe(200)
-    const quota = await espace.json<{ octets_plafond: number }>()
+    const quota = await espace.json<{ octets_plafond: number; octets_corbeille: number }>()
     expect(quota.octets_plafond).toBe(9663676416)
+    expect(quota.octets_corbeille).toBeGreaterThanOrEqual(0)
 
     const id2 = await ajouterJpeg(cookie)
     const lot = await SELF.fetch("https://exemple.test/api/photos/corbeille", {
@@ -62,7 +63,17 @@ describe("contrat photos", () => {
     })
     expect(lot.status).toBe(200)
     const lotJson = await lot.json<{ ids: string[] }>()
-    expect(lotJson.ids).toEqual(expect.arrayContaining([id, id2]))
+    expect(lotJson.ids.sort()).toEqual([id, id2].sort())
+
+    const fantome = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    const lotFantome = await SELF.fetch("https://exemple.test/api/photos/corbeille", {
+      method: "POST",
+      headers: { Cookie: cookie, "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [fantome, id] }),
+    })
+    expect(lotFantome.status).toBe(200)
+    const fantomeJson = await lotFantome.json<{ ids: string[] }>()
+    expect(fantomeJson.ids).not.toContain(fantome)
 
     const restoLot = await SELF.fetch("https://exemple.test/api/photos/restauration", {
       method: "POST",
@@ -76,6 +87,10 @@ describe("contrat photos", () => {
       headers: { Cookie: cookie },
     })
     expect(corbeille.status).toBe(200)
+
+    const pageCorbeille = await SELF.fetch(`https://exemple.test/photos/${id}`, { headers: { Cookie: cookie } })
+    expect(pageCorbeille.status).toBe(200)
+    expect(await pageCorbeille.text()).toMatch(/à la corbeille/)
 
     const fichier = await SELF.fetch(`https://exemple.test/api/photos/${id}/fichier`, {
       headers: { Cookie: cookie },

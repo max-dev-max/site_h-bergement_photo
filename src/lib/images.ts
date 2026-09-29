@@ -8,28 +8,71 @@ export type DerivesImage = {
   mimeSortie: string
 }
 
+export type RepliNavigateur = {
+  miniature: ArrayBuffer
+  affichage: ArrayBuffer
+  largeur: number
+  hauteur: number
+}
+
+export class ErreurDerives extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "ErreurDerives"
+  }
+}
+
+const OCTETS_MAX_MINIATURE = 2 * 1024 * 1024
+const OCTETS_MAX_AFFICHAGE = 8 * 1024 * 1024
+
+export function estAffichableNavigateur(typeMime: string): boolean {
+  return ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(typeMime)
+}
+
+function estJpeg(octets: ArrayBuffer): boolean {
+  const u = new Uint8Array(octets)
+  return u.length >= 3 && u[0] === 0xff && u[1] === 0xd8 && u[2] === 0xff
+}
+
+export function repliUtilisable(repli?: RepliNavigateur): repli is RepliNavigateur {
+  if (!repli) return false
+  if (!Number.isFinite(repli.largeur) || !Number.isFinite(repli.hauteur)) return false
+  if (repli.largeur < 1 || repli.hauteur < 1 || repli.largeur > 20_000 || repli.hauteur > 20_000) {
+    return false
+  }
+  if (repli.miniature.byteLength < 32 || repli.affichage.byteLength < 32) return false
+  if (repli.miniature.byteLength > OCTETS_MAX_MINIATURE) return false
+  if (repli.affichage.byteLength > OCTETS_MAX_AFFICHAGE) return false
+  return estJpeg(repli.miniature) && estJpeg(repli.affichage)
+}
+
 /**
- * Produit miniature + variante d’affichage.
- * Priorité : binding Cloudflare Images (transformation privée, aucune URL de delivery).
- * Repli : formats déjà affichables (JPEG/PNG/WebP/GIF) — l’original est recopié.
- * Le navigateur peut aussi envoyer des dérivés canvas (voir public/ajout.js).
+ * Miniature + variante d’affichage, toujours dans un format affichable par le navigateur.
+ * 1. Cloudflare Images (JPEG)
+ * 2. Repli canvas JPEG validé (magic bytes + taille)
+ * 3. Recopie de l’original s’il est déjà JPEG/PNG/WebP/GIF
+ * Sinon : échec (pas de HEIC/AVIF dans une balise img).
  */
 export async function produireDerives(
   octets: ArrayBuffer,
   typeMime: string,
   env: Env,
-  repli?: { miniature?: ArrayBuffer; affichage?: ArrayBuffer; largeur?: number; hauteur?: number },
+  repli?: RepliNavigateur,
 ): Promise<DerivesImage> {
   if (env.IMAGES) {
     try {
-      return await viaImages(octets, env.IMAGES)
+      const via = await viaImages(octets, env.IMAGES)
+      if (via.largeur <= 1 && via.hauteur <= 1 && repliUtilisable(repli)) {
+        return { ...via, largeur: repli.largeur, hauteur: repli.hauteur }
+      }
+      return via
     } catch (err) {
       const message = err instanceof Error ? err.message : "images"
       console.error("derives-images", message)
     }
   }
 
-  if (repli?.miniature && repli.affichage && repli.largeur && repli.hauteur) {
+  if (repliUtilisable(repli)) {
     return {
       miniature: repli.miniature,
       affichage: repli.affichage,
@@ -50,7 +93,7 @@ export async function produireDerives(
     }
   }
 
-  throw new Error("DERIVES_INDISPONIBLES")
+  throw new ErreurDerives("Cette photo n’a pas pu être préparée pour l’affichage.")
 }
 
 async function viaImages(octets: ArrayBuffer, images: ImagesBinding): Promise<DerivesImage> {
@@ -78,6 +121,9 @@ async function viaImages(octets: ArrayBuffer, images: ImagesBinding): Promise<De
 
   const affichage = await affichageRes.response().arrayBuffer()
   const miniature = await miniatureRes.response().arrayBuffer()
+  if (!estJpeg(affichage) || !estJpeg(miniature)) {
+    throw new Error("images-pas-jpeg")
+  }
   if (largeur <= 1 && hauteur <= 1) {
     const dims = dimensionsBasiques(new Uint8Array(affichage), "image/jpeg")
     largeur = dims.largeur
@@ -90,10 +136,6 @@ async function viaImages(octets: ArrayBuffer, images: ImagesBinding): Promise<De
     hauteur: Math.max(1, hauteur),
     mimeSortie: "image/jpeg",
   }
-}
-
-function estAffichableNavigateur(typeMime: string): boolean {
-  return ["image/jpeg", "image/png", "image/webp", "image/gif"].includes(typeMime)
 }
 
 export function dimensionsBasiques(

@@ -17,13 +17,21 @@ export function PagePhoto(props: { photo: Photo }) {
   const prise = photo.date_prise_de_vue
     ? formaterDate(photo.date_prise_de_vue)
     : textes.datePriseInconnue
+  const enCorbeille = photo.etat === "corbeille"
 
   return (
     <Layout titre={photo.nom_fichier} connecte scripts={["/photo.js"]}>
       <p class="fil">
-        <a href="/galerie">{textes.retourGalerie}</a>
+        <a href={enCorbeille ? "/corbeille" : "/galerie"}>
+          {enCorbeille ? textes.corbeille : textes.retourGalerie}
+        </a>
       </p>
-      <article class="vue-photo" data-id={photo.id} data-confirm={textes.confirmerCorbeille}>
+      <article
+        class="vue-photo"
+        data-id={photo.id}
+        data-confirm={textes.confirmerCorbeille}
+      >
+        {enCorbeille ? <p class="bandeau-corbeille">{textes.photoEnCorbeille}</p> : null}
         <figure class="cadre-affichage">
           <img
             class="image-entiere"
@@ -49,7 +57,13 @@ export function PagePhoto(props: { photo: Photo }) {
             <dt>{textes.poids}</dt>
             <dd>{formatOctets(photo.octets)}</dd>
           </dl>
-          {photo.etat === "active" ? (
+          {enCorbeille ? (
+            <div class="gestes">
+              <button type="button" id="btn-restaurer" class="bouton">
+                {textes.restaurer}
+              </button>
+            </div>
+          ) : (
             <div class="gestes">
               <a class="bouton" href={`/api/photos/${photo.id}/fichier`}>
                 {textes.telecharger}
@@ -58,7 +72,7 @@ export function PagePhoto(props: { photo: Photo }) {
                 {textes.mettreCorbeille}
               </button>
             </div>
-          ) : null}
+          )}
         </aside>
       </article>
     </Layout>

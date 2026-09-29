@@ -26,7 +26,8 @@ describe("lots corbeille", () => {
         .run()
     }
 
-    await mettrePlusieursALaCorbeille(env.DB, ids)
+    const deplacees = await mettrePlusieursALaCorbeille(env.DB, ids)
+    expect(deplacees.sort()).toEqual([...ids].sort())
     const enCorbeille = await env.DB.prepare(
       "SELECT COUNT(*) AS n FROM photo WHERE etat = 'corbeille' AND id IN (?, ?)",
     )
@@ -34,12 +35,25 @@ describe("lots corbeille", () => {
       .first<{ n: number }>()
     expect(Number(enCorbeille?.n)).toBe(2)
 
-    await restaurerPlusieurs(env.DB, ids)
+    const restaurees = await restaurerPlusieurs(env.DB, ids)
+    expect(restaurees.sort()).toEqual([...ids].sort())
     const actives = await env.DB.prepare(
       "SELECT COUNT(*) AS n FROM photo WHERE etat = 'active' AND id IN (?, ?)",
     )
       .bind(ids[0], ids[1])
       .first<{ n: number }>()
     expect(Number(actives?.n)).toBe(2)
+  })
+
+  it("n’invente pas d’id dans un lot", async () => {
+    const fantome = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    const deplacees = await mettrePlusieursALaCorbeille(env.DB, [fantome])
+    expect(deplacees).toEqual([])
+  })
+
+  it("accepte un UUID hors RFC strict (variante Microsoft)", () => {
+    expect(idsValides(["00000000-0000-0000-0000-000000000000"])).toEqual([
+      "00000000-0000-0000-0000-000000000000",
+    ])
   })
 })

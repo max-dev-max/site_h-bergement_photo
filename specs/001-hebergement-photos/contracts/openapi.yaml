@@ -3,7 +3,7 @@ info:
   title: Hébergement privé de photos — API foyer
   version: 1.0.0
   description: |
-    API same-origin du site. Cookie de session obligatoire sauf /entree.
+    API same-origin du site. Cookie de session obligatoire sauf /entree, /sortie, robots.txt, styles.css et favicon.
     Les photos ne sont jamais publiques. Un UUID ne suffit pas.
     Textes d'erreur en français, non révélateurs pour un anonyme.
   license:
@@ -61,18 +61,26 @@ paths:
       tags: [session]
       summary: Se déconnecter
       operationId: sortir
+      security: []
       responses:
         "302":
-          description: Cookie vidé, redirection /entree
+          description: Cookie vidé (même sans session), redirection /entree
 
   /api/photos:
     get:
       tags: [photos]
       summary: Lister les photos actives (hors corbeille)
       operationId: listerPhotosActives
+      parameters:
+        - name: tri
+          in: query
+          schema:
+            type: string
+            enum: [recent, ancien]
+            default: recent
       responses:
         "200":
-          description: Grille galerie, plus récentes d'abord
+          description: Grille galerie, même tri que la page HTML
           content:
             application/json:
               schema:
@@ -97,6 +105,26 @@ paths:
                     type: string
                     format: binary
                   description: JPEG, PNG, WebP, GIF, HEIC ou AVIF, chacun ≤ 50 Mo
+                derive_miniature:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: JPEG canvas, un par fichier (même indice)
+                derive_affichage:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: JPEG canvas, un par fichier (même indice)
+                derive_largeur:
+                  type: array
+                  items:
+                    type: integer
+                derive_hauteur:
+                  type: array
+                  items:
+                    type: integer
       responses:
         "201":
           description: Photos enregistrées (privées)
@@ -124,6 +152,12 @@ paths:
                 $ref: "#/components/schemas/Erreur"
         "401":
           $ref: "#/components/responses/NonAuthentifie"
+        "503":
+          description: Stockage indisponible — aucun fichier conservé pour cet ajout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
 
   /api/photos/corbeille:
     post:
@@ -138,7 +172,7 @@ paths:
               $ref: "#/components/schemas/IdsPhotos"
       responses:
         "200":
-          description: Photos déplacées (plus dans la galerie, encore récupérables)
+          description: Identifiants réellement passés à la corbeille (les autres sont omis)
           content:
             application/json:
               schema:
@@ -165,7 +199,7 @@ paths:
               $ref: "#/components/schemas/IdsPhotos"
       responses:
         "200":
-          description: Photos à nouveau actives
+          description: Identifiants réellement restaurés (les autres sont omis)
           content:
             application/json:
               schema:
@@ -540,7 +574,7 @@ components:
 
     Espace:
       type: object
-      required: [octets_utilises, octets_plafond]
+      required: [octets_utilises, octets_plafond, octets_corbeille]
       properties:
         octets_utilises:
           type: integer
@@ -548,6 +582,10 @@ components:
         octets_plafond:
           type: integer
           const: 9663676416
+        octets_corbeille:
+          type: integer
+          minimum: 0
+          description: Part des originaux encore à la corbeille (incluse dans octets_utilises)
 
 security:
   - cookieSession: []

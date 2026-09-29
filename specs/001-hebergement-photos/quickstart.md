@@ -90,7 +90,7 @@ Remplacer `BASE` par l’origine (local ou déployée). Les cookies de session d
 ### 7. Session 30 minutes (FR-021)
 
 - Activité récente : on reste connecté.
-- Après 30 min sans requête (ou horloge de test) : médias et pages protégées refusés jusqu’à nouvelle entrée.
+- Après 30 min sans action (page HTML ou mutation ; pas le simple chargement d’une miniature) : médias et pages protégées refusés jusqu’à nouvelle entrée.
 
 ### 8. Isolation (FR-014, principe IV)
 

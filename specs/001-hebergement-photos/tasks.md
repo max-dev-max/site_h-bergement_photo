@@ -83,8 +83,8 @@ public/  migrations/  tests/  wrangler.toml
 - [X] T023 [US1] Implémenter `POST /entree` (champs vides → 400 « remplir les deux » ; comparaison temps constant ; cookie session ; redirection `/galerie`) dans `src/auth/entree.ts`
 - [X] T024 [US1] Afficher un **seul** message générique en cas d’identifiants incorrects, sans blocage ni temporisation, dans `src/vues/entree.tsx`
 - [X] T025 [US1] Implémenter `POST /sortie` (cookie vidé, redirection `/entree`) dans `src/auth/entree.ts` et le bouton de déconnexion dans `src/vues/layout.tsx`
-- [X] T026 [US1] Protéger toutes les pages sauf `/entree`, `/robots.txt` et les assets sans photo : anonyme → 302 `/entree`, aucun miniature / nom / info, dans `src/middleware/auth.ts`
-- [X] T027 [US1] Renouveler `exp = maintenant + 30 min` à chaque requête authentifiée réussie et refuser après 30 min d’inactivité dans `src/auth/session.ts`
+- [X] T026 [US1] Protéger toutes les pages sauf `/entree`, `/robots.txt`, `/styles.css` et `/favicon.ico` ; les JS métier exigent une session : anonyme → 302 `/entree`, dans `src/middleware/auth.ts`
+- [X] T027 [US1] Renouveler `exp = maintenant + 30 min` sur une action (page HTML ou mutation), pas sur miniature/CSS/JS, et refuser après 30 min d’inactivité dans `src/auth/session.ts` et `src/middleware/auth.ts`
 
 **Point de contrôle** : US1 testable seule (entrée, refus, sortie, expiration). Pas encore d’ajout ni de grille.
 
@@ -101,10 +101,10 @@ public/  migrations/  tests/  wrangler.toml
 - [X] T028 [P] [US2] Extraire uniquement la date de prise de vue EXIF (`DateTimeOriginal` ou équivalent), sinon `null`, dans `src/lib/exif.ts`
 - [X] T029 [P] [US2] Produire miniature + variante d’affichage (binding Images privé, repli canvas documenté) dans `src/lib/images.ts` — aucune URL de delivery Images
 - [X] T030 [US2] Lire / incrémenter `quota.octets_utilises` (galerie + corbeille) dans `src/photos/quota.ts`
-- [X] T031 [US2] Implémenter l’ajout atomique (magic bytes + MIME, ≤ 50 Mo, quota, 3 objets R2 puis INSERT D1, nettoyage des orphelins, pas de fusion de doublons) dans `src/photos/ajout.ts`
+- [X] T031 [US2] Implémenter l’ajout (magic bytes + MIME, ≤ 50 Mo, réserve quota puis 3 objets R2 puis INSERT D1, nettoyage, pas de fusion de doublons) dans `src/photos/ajout.ts`
 - [X] T032 [US2] Implémenter `POST /api/photos` (multipart, 201 / 400 / 413 / 409 / 401) dans `src/index.ts` selon [contracts/openapi.yaml](./contracts/openapi.yaml)
 - [X] T033 [US2] Implémenter `GET /api/espace` dans `src/photos/quota.ts` et `src/index.ts`
-- [X] T034 [US2] Créer le formulaire d’ajout multi-fichiers (textes FR, messages 50 Mo / format / 9 Go) dans `src/vues/ajout.tsx`
+- [X] T034 [US2] Créer le formulaire d’ajout multi-fichiers (textes FR, messages 50 Mo / format / 9 Go) dans `src/vues/galerie.tsx`
 - [X] T035 [US2] Ajouter le JS d’envoi (plusieurs fichiers, interruption → pas de photo partielle en galerie) dans `public/ajout.js`
 - [X] T036 [US2] Refuser tout accès anonyme aux originaux / miniatures / infos d’une photo juste ajoutée (même UUID connu) dans `src/photos/fichiers.ts`
 

@@ -6,18 +6,21 @@ API et pages du site d’hébergement privé. Détail machine-lisible : [openapi
 
 ## Pages HTML (UI)
 
-Toutes les pages sauf `/entree` exigent une session. Textes en français. `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`.
+Les pages de contenu (galerie, photo, corbeille) exigent une session. `/entree`, `robots.txt`, `styles.css` et `favicon.ico` sont publics. Textes en français. `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`.
 
 | Méthode | Chemin | Auth | Comportement |
 | --- | --- | --- | --- |
 | GET | `/entree` | Non | Formulaire identifiant + mot de passe. Si déjà connecté → redirection `/galerie`. |
 | POST | `/entree` | Non | Vérifie les deux champs. Succès → cookie + `/galerie`. Échec → même page, **un** message générique, nouvel essai immédiat. Champs vides → demander de remplir les deux. |
-| POST | `/sortie` | Oui | Vide le cookie, redirection `/entree`. |
+| POST | `/sortie` | Non | Vide le cookie même sans session, redirection `/entree`. |
 | GET | `/galerie` | Oui | Grille dense des photos `active`, plus récentes d’abord. État vide si aucune. Actions : ajouter, ouvrir, aller à la corbeille, se déconnecter. |
-| GET | `/photos/{id}` | Oui | Vue agrandie d’une photo **active** : image nette, nom, date d’ajout, date de prise de vue ou « inconnue », dimensions, poids, télécharger, mettre à la corbeille (confirmation). Inconnue / corbeille → pas de fuite ; retour galerie. |
-| GET | `/corbeille` | Oui | Miniatures des photos `corbeille`. Restaurer une photo. Vider (confirmation). **Pas** de téléchargement. État vide explicite. |
+| GET | `/photos/{id}` | Oui | Vue agrandie. Photo **active** : image, infos, télécharger, corbeille. Photo **corbeille** : image, infos, restaurer, **pas** de téléchargement. Introuvable → page générique, retour galerie. |
+| GET | `/corbeille` | Oui | Miniatures des photos `corbeille` (lien vers la vue agrandie). Restaurer. Vider (confirmation). **Pas** de téléchargement. État vide explicite. |
 | GET | `/` | — | Connecté → `/galerie`. Sinon → `/entree`. |
 | GET | `/robots.txt` | Non | `User-agent: *` / `Disallow: /` |
+| GET | `/styles.css` | Non | Feuille de styles de la page d’entrée. |
+| GET | `/favicon.ico` | Non | 204 (pas de redirection vers l’entrée). |
+| GET | `/galerie.js`, `/ajout.js`, `/photo.js`, `/corbeille.js` | Oui | Scripts métier. Sans session → 302 `/entree`. |
 
 Personne non connectée sur une page protégée → **302 `/entree`**, aucun corps photo.
 
@@ -28,11 +31,11 @@ Voir [openapi.yaml](./openapi.yaml). Synthèse :
 | Méthode | Chemin | Auth | Rôle |
 | --- | --- | --- | --- |
 | POST | `/api/photos` | Oui | Ajout multipart (un ou plusieurs fichiers). |
-| GET | `/api/photos` | Oui | Liste **actives** (métadonnées + URLs same-origin). |
+| GET | `/api/photos` | Oui | Liste **actives** (`?tri=recent\|ancien`, même règle que la galerie). |
 | GET | `/api/photos/{id}` | Oui | Métadonnées d’une photo (active ou corbeille). |
 | GET | `/api/photos/{id}/miniature` | Oui | Bytes miniature. |
 | GET | `/api/photos/{id}/affichage` | Oui | Bytes vue agrandie. |
-| GET | `/api/photos/{id}/fichier` | Oui | Original, `Content-Disposition: attachment`. **401/404** si corbeille (pas de téléchargement). |
+| GET | `/api/photos/{id}/fichier` | Oui | Original, `Content-Disposition: attachment`. **409** si corbeille (pas de téléchargement). |
 | POST | `/api/photos/{id}/corbeille` | Oui | Active → corbeille. |
 | POST | `/api/photos/corbeille` | Oui | Plusieurs actives → corbeille (jusqu’à 400 id). |
 | POST | `/api/photos/{id}/restauration` | Oui | Corbeille → galerie. |
